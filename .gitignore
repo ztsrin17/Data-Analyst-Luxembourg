@@ -216,6 +216,7 @@ __marimo__/
 *.xlsx
 *.xls
 *.json
+*.xml
 
 # Database files
 # Local database files can get large and are specific to your machine.
