@@ -205,3 +205,24 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# =========================================
+# DA Additions
+# =========================================
+
+# Data files
+# To avoid uploading large datasets. Add a link to the source in your README instead.
+*.csv
+*.xlsx
+*.xls
+*.json
+
+# Database files
+# Local database files can get large and are specific to your machine.
+*.db
+*.sqlite
+*.sqlite3
+
+# Power BI files
+# These are project files and can be very large.
+*.pbix
