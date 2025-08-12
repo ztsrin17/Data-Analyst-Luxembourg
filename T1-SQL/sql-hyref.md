@@ -1,0 +1,49 @@
+# SQL – Mental Models + Mini Syntax
+
+**Execution flow:**  
+Think: `FROM` → `WHERE` → `GROUP BY` → `HAVING` → `SELECT` → `ORDER BY` → `LIMIT`  
+(Memory trick: “From Where Groups Have Selective Orders Limited.”)
+
+**Joins:**  
+- INNER = overlap only  
+  `... FROM A INNER JOIN B ON A.id = B.id`  
+- LEFT = keep all left rows + match right  
+- RIGHT = mirror of LEFT  
+- FULL = keep all rows from both
+
+**Filters:**  
+- Row-level (before grouping): `WHERE price > 100`  
+- Group-level (after grouping):  
+```sql
+  GROUP BY category
+  HAVING COUNT(*) > 5
+```
+
+**Patterns:**
+
+* LIKE fuzzy match:
+  `WHERE name LIKE 'A%'`  -- starts with A
+  `WHERE name LIKE '_b%'` -- 2nd char is b
+
+**Aggregates:**
+
+* Ignore NULL: `COUNT(col)` skips nulls, `COUNT(*)` counts all
+* Multi-agg example:
+  `SELECT category, AVG(price), MAX(price) FROM products GROUP BY category`
+
+**CASE:**
+
+```sql
+CASE WHEN price > 100 THEN 'Premium'
+     ELSE 'Standard'
+END AS price_tag
+```
+
+**NULL logic:**
+`WHERE col IS NULL` or `WHERE col IS NOT NULL`
+
+**Best Practices:**
+
+* Always name columns (avoid `SELECT *`)
+* Alias tables: `customers c`
+* Build in steps: test FROM → WHERE → GROUP BY before adding HAVING/ORDER BY
