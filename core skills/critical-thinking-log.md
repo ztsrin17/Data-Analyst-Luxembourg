@@ -27,3 +27,24 @@ The article argues that EU data stored with US cloud providers risks privacy vio
 1. The article assumes that keeping data in Europe automatically provides better privacy protection than US-based storage.
 2. The article assumes that if European providers "band together" they would be able to compete with US Data Giants (AWS, Azure, Google Cloud).
 3. The article assumes that regulatory compliance means data being more secure.
+
+
+# session 4
+
+## Hypothesis Generation
+[Danny's Dinner Case Study 1] https://8weeksqlchallenge.com/case-study-1/
+
+### Testable Hypotheses
+
+1. **Product popularity hypothesis**: "Sushi is the best-selling item because it has the highest order count."
+==without a sort of product_cost we cannot determine best-profit==
+
+2. **Member engagement hypothesis**: "Customers who are members order more frequently than non-member customers."
+
+3. **Price sensitivity hypothesis**: "Cheaper menu items are more popular than expensive ones."
+
+4. **Customer loyalty hypothesis**: "Customer A is the most loyal customer based on total number of visits."
+
+==EXTRA==
+
+5. **Specific days peak**: "There is a specific day of the week when members are most likely to place an order."
