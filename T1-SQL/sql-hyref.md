@@ -42,8 +42,20 @@ END AS price_tag
 **NULL logic:**
 `WHERE col IS NULL` or `WHERE col IS NOT NULL`
 
-**Best Practices:**
-
-* Always name columns (avoid `SELECT *`)
+**Best Practices:*** Always name columns (avoid `SELECT *`)
 * Alias tables: `customers c`
 * Build in steps: test FROM → WHERE → GROUP BY before adding HAVING/ORDER BY
+**Other Useful Clauses:**
+- DISTINCT: `SELECT DISTINCT col1, col2 FROM table;` – removes duplicates.
+- ORDER BY: `ORDER BY col1 ASC, col2 DESC;` – multi-column sorting.
+- LIMIT/OFFSET: `LIMIT 10 OFFSET 20;` – pagination.
+
+**COALESCE for NULLs:**
+```sql
+SELECT name, COALESCE(mobile, 'N/A') AS contact_number
+FROM customers;
+```
+
+**HAVING vs WHERE Tip:**
+- WHERE filters rows before grouping.
+- HAVING filters after grouping (use for aggregates).

@@ -66,14 +66,37 @@ LEFT JOIN orders ON customers.id = orders.customer_id;
 
 **FULL JOIN**: ALL rows from BOTH tables (shows NULLs where matches don't exist)
 
+### Table Aliases and Multi-table Strategy
+- **Table alias syntax**: `FROM submissions s` creates alias 's' for cleaner queries
+- **Consistency rule**: Once defined, must use alias (not original name) for column references
+- **Best practice**: Choose meaningful abbreviations for complex multi-table queries
+
 ### JOIN Best Practices
 - **Table qualification**: Use `table.column` notation when column names are ambiguous (required for ambiguous columns)
 - **Table aliases**: `FROM movies m JOIN directors d ON m.director_id = d.id`
 - **FROM table choice**: 
   - 2 tables: doesn't matter which is FROM vs JOIN
   - 3+ tables: use most central table as FROM, chain other JOINs
+  - **Central table strategy**: Use table with most foreign key relationships as FROM table
 - **Multiple conditions**: Use OR in JOIN: `ON (game.team1 = team.id OR game.team2 = team.id)`
 - **Key identification**: Look for connecting columns (often `id` fields) between tables
+
+### Complex JOIN Patterns with Aggregation
+- **Multi-level filtering**: WHERE for row-level conditions, HAVING for aggregate conditions
+- **DISTINCT in aggregates**: `COUNT(DISTINCT column)` prevents duplicate counting in complex scenarios
+- **Pattern recognition**: "Number of X per Y" → GROUP BY Y, COUNT(X)
+
+```sql
+-- Multi-table analysis pattern
+SELECT target_columns
+FROM central_table ct
+INNER JOIN related_table1 rt1 ON ct.key1 = rt1.key1
+INNER JOIN related_table2 rt2 ON ct.key2 = rt2.key2
+WHERE row_level_conditions
+GROUP BY grouping_columns
+HAVING aggregate_conditions
+ORDER BY sorting_logic;
+```
 
 ## Operators & Comparisons
 
@@ -133,6 +156,22 @@ WHERE column IS NOT NULL
 - Common in OUTER JOINs when no matching row exists
 - **Prefer defaults** (0, empty strings) when possible
 - **Use NULL when** default values would skew analysis (like averages)
+
+### COALESCE Function for NULL Handling
+- **COALESCE function**: Returns first non-NULL value from list
+- **Syntax**: `COALESCE(mobile, '07986 444 2266')` replaces NULL with default
+- **JOIN considerations**: LEFT/RIGHT JOINs can introduce NULLs requiring COALESCE
+- **Business logic**: Essential for data cleaning and default value assignment
+
+```sql
+-- Replace NULL values with defaults
+SELECT name, COALESCE(mobile, '07986 444 2266') AS contact_number
+FROM customers;
+
+-- Chain multiple fallbacks
+SELECT COALESCE(preferred_email, work_email, personal_email, 'No email') AS contact_email
+FROM users;
+```
 
 ## Aggregate Functions
 
@@ -197,6 +236,31 @@ WHERE date_column BETWEEN
 
 -- Date only filtering (when column is DATE type)
 WHERE date_column BETWEEN DATE '2022-01-01' AND DATE '2022-12-31'
+```
+
+### EXTRACT Function for Date Manipulation
+- **Day of week**: `EXTRACT(DOW FROM date)` returns 0 for Sunday, 6 for Saturday
+- **Month extraction**: `EXTRACT(MONTH FROM submit_date)` for grouping by month
+- **Business applications**: Weekend/weekday analysis, seasonal patterns, day-of-week trends
+
+```sql
+-- Weekend vs weekday analysis
+SELECT 
+    CASE WHEN EXTRACT(DOW FROM order_date) IN (0, 6) 
+         THEN 'Weekend' 
+         ELSE 'Weekday' 
+    END AS day_type,
+    COUNT(*) as order_count
+FROM orders
+GROUP BY day_type;
+
+-- Monthly grouping
+SELECT 
+    EXTRACT(MONTH FROM submit_date) AS month,
+    COUNT(*) as submissions
+FROM applications
+GROUP BY month
+ORDER BY month;
 ```
 
 ## Grouping & Filtering
@@ -351,6 +415,175 @@ FROM tweets_per_user
 GROUP BY tweet_count;
 ```
 
+### CTE Best Practices and Limitations
+- **Column naming requirement**: Must alias calculated columns in CTE to reference them later
+- **Subquery alternative**: CTEs don't eliminate need for subqueries in all cases (still needed for MAX comparison)
+- **Readability advantage**: Breaking complex logic into named, reusable components
+- **Syntax reminder**: `WITH cte_name AS (inner_query) SELECT * FROM cte_name`
+
+```sql
+-- CTE for complex calculations pattern
+WITH calculations AS (
+    SELECT base_columns,
+           calculated_expression AS calc_name
+    FROM source_table
+    WHERE conditions
+)
+SELECT base_columns, calc_name,
+       additional_calculations_using_calc_name
+FROM calculations
+WHERE calc_name meets_criteria;
+```
+
+## Advanced Concepts
+
+### CASE Statements - Conditional Logic
+```sql
+-- Basic CASE syntax (don't forget END!)
+CASE WHEN condition THEN value
+     WHEN condition THEN value
+     ELSE default_value
+END
+
+-- Example: Conditional counting with aggregation
+SELECT 
+    game.mdate,
+    game.team1,
+    SUM(CASE WHEN goal.teamid = game.team1 THEN 1 ELSE 0 END) AS score1,
+    game.team2,
+    SUM(CASE WHEN goal.teamid = game.team2 THEN 1 ELSE 0 END) AS score2
+FROM game
+LEFT JOIN goal ON game.id = goal.matchid
+GROUP BY game.mdate, game.id, game.team1, game.team2;
+```
+
+### CASE Statement Best Practices and Patterns
+- **Row-by-row evaluation**: CASE evaluates each row individually against conditions
+- **Boolean conditions required**: WHEN clause needs full boolean expression (not just column names)
+- **Alias limitation**: Cannot reference column aliases within same SELECT statement
+- **CTE solution**: Use CTE when needing to reference calculated values multiple times
+
+```sql
+-- Multiple conditions in CASE
+SELECT employee_id,
+    CASE 
+        WHEN score >= 90 AND attendance > 80 THEN 'Honor Roll'
+        WHEN score BETWEEN 75 AND 89 THEN 'B Grade'
+        WHEN EXTRACT(DOW FROM hire_date) IN (0, 6) THEN 'Weekend Hire'
+        ELSE 'Standard'
+    END AS category
+FROM employees;
+
+-- Aggregate CASE for conditional calculations
+SELECT department,
+    SUM(CASE WHEN status = 'Paid' THEN amount ELSE 0 END) AS paid_total,
+    COUNT(CASE WHEN priority = 'High' THEN 1 END) AS high_priority_count
+FROM orders
+GROUP BY department;
+
+-- CTE solution for complex CASE dependencies
+WITH performance_calc AS (
+    SELECT employee_id, salary,
+        CASE 
+            WHEN performance_score >= 90 THEN 0.15
+            WHEN performance_score >= 80 THEN 0.10
+            ELSE 0.05
+        END AS bonus_rate
+    FROM employees
+)
+SELECT employee_id, salary,
+    bonus_rate,
+    salary * bonus_rate AS bonus_amount,
+    CASE 
+        WHEN bonus_rate >= 0.15 THEN 'Top Performer'
+        ELSE 'Standard'
+    END AS performance_tier
+FROM performance_calc;
+```
+
+### Window Functions - Advanced Analytics
+**Core concept**: Perform calculations across related rows without collapsing groups like GROUP BY does.
+
+```sql
+-- Required syntax
+SELECT columns,
+       WINDOW_FUNCTION() OVER (
+           PARTITION BY grouping_column 
+           ORDER BY sorting_column
+       ) AS result_alias
+FROM table_name;
+```
+
+- **PARTITION BY**: Creates windows/sections for calculation (like GROUP BY but keeps individual rows)
+- **ORDER BY in OVER**: Determines row sequence for running calculations
+
+### Ranking Functions Comparison
+| Function | Handles Ties | Skips Ranks | Use Case |
+|----------|-------------|-------------|-----------|
+| `ROW_NUMBER()` | No (sequential) | N/A | Unique numbering needed |
+| `RANK()` | Yes (same rank) | Yes (gaps) | Traditional ranking |
+| `DENSE_RANK()` | Yes (same rank) | No (no gaps) | Compact ranking |
+
+```sql
+-- Ranking example
+SELECT student_id, score,
+    ROW_NUMBER() OVER (ORDER BY score DESC) as row_num,
+    RANK() OVER (ORDER BY score DESC) as rank_gaps,
+    DENSE_RANK() OVER (ORDER BY score DESC) as dense_rank
+FROM test_scores;
+
+-- Ranking within groups
+SELECT category, product_name, price,
+    RANK() OVER (PARTITION BY category ORDER BY price DESC) as price_rank
+FROM products;
+```
+
+### Window Function Applications
+```sql
+-- Running totals
+SELECT user_id, transaction_date, amount,
+    SUM(amount) OVER (
+        PARTITION BY user_id 
+        ORDER BY transaction_date
+    ) AS running_total
+FROM transactions;
+
+-- Rolling averages
+SELECT team, game_date, score,
+    AVG(score) OVER (
+        PARTITION BY team 
+        ORDER BY game_date 
+        ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+    ) AS rolling_3_game_avg
+FROM game_results;
+
+-- First/Last values in windows
+SELECT department, employee_id, salary,
+    FIRST_VALUE(salary) OVER (
+        PARTITION BY department 
+        ORDER BY salary DESC
+    ) AS highest_salary_in_dept,
+    LAST_VALUE(salary) OVER (
+        PARTITION BY department 
+        ORDER BY salary DESC
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS lowest_salary_in_dept
+FROM employees;
+```
+
+### EXISTS Clause (Advanced)
+More flexible alternative to OR conditions in JOINs
+```sql
+-- Find games where Fernando Santos coached either team
+SELECT game.mdate 
+FROM game 
+WHERE EXISTS (
+    SELECT 1 FROM eteam 
+    WHERE coach = 'Fernando Santos' 
+    AND (id = game.team1 OR id = game.team2)
+);
+```
+
 ## Key Clauses
 
 ### DISTINCT
@@ -377,50 +610,6 @@ LIMIT 10 OFFSET 20;
 -- Skip first 20 rows, return next 10 (pagination)
 ```
 
-## Advanced Concepts
-
-### CASE Statements - Conditional logic in queries
-```sql
--- Basic CASE syntax (don't forget END!)
-CASE WHEN condition THEN value
-     WHEN condition THEN value
-     ELSE default_value
-END
-
--- Example: Conditional counting with aggregation
-SELECT 
-    game.mdate,
-    game.team1,
-    SUM(CASE WHEN goal.teamid = game.team1 THEN 1 ELSE 0 END) AS score1,
-    game.team2,
-    SUM(CASE WHEN goal.teamid = game.team2 THEN 1 ELSE 0 END) AS score2
-FROM game
-LEFT JOIN goal ON game.id = goal.matchid
-GROUP BY game.mdate, game.id, game.team1, game.team2;
-```
-
-### EXISTS Clause (Advanced)
-More flexible alternative to OR conditions in JOINs
-```sql
--- Find games where Fernando Santos coached either team
-SELECT game.mdate 
-FROM game 
-WHERE EXISTS (
-    SELECT 1 FROM eteam 
-    WHERE coach = 'Fernando Santos' 
-    AND (id = game.team1 OR id = game.team2)
-);
-```
-
-### Window Functions (Advanced)
-```sql
--- Using OVER clause for advanced calculations
-SELECT salary * months,
-    SUM(CASE WHEN salary * months = MAX(salary * months) OVER () 
-        THEN 1 ELSE 0 END) AS num_employees
-FROM employee;
-```
-
 ## Professional Query Writing
 
 ### Formatting Best Practices
@@ -444,6 +633,12 @@ FROM game g
 WHERE g.mdate >= '2012-06-01'
 ORDER BY g.mdate ASC, g.id ASC;
 ```
+
+### Problem-Solving Patterns
+- **Step-by-step approach**: Breaking complex problems into smaller, manageable queries
+- **Table relationship mapping**: Drawing out foreign key connections before writing JOINs
+- **CTE for readability**: Using CTEs when calculations needed multiple times
+- **Alternative solution exploration**: Considering different approaches (nested CASE vs CTE)
 
 ### Debugging Strategy
 **Step-by-step approach**:
@@ -509,6 +704,9 @@ ORDER BY game.id ASC;
 -   **Database name duplicates**: Real databases can have duplicate names with different IDs (use IN with subqueries)
 -   **Date formatting**: Stick to ISO format 'YYYY-MM-DD HH:MM:SS' for maximum compatibility
 -   **HAVING vs WHERE confusion**: HAVING is only for aggregated values, WHERE for everything else
+-   **SQL Tuple Comparison Limitations**: `(col1, col2) > 50` is invalid; use `col1 > 50 AND col2 > 50` instead
+-   **CASE alias limitation**: Cannot reference column aliases within same SELECT statement
+-   **CTE column naming**: Must alias calculated columns in CTE to reference them later
 
 ### Cross-Platform Practice Benefits
 -   **Interface adaptation**: Different platforms (SQLZoo, HackerRank, DataLemur, SQL Fiddle) build flexibility

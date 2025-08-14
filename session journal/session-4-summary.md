@@ -53,8 +53,7 @@
 - Solved **W3Resource exercises 11-20** on aggregate functions and GROUP BY/HAVING combinations
 - Tackled **HackerRank problems**: Revising Aggregations, Weather Observation Station 18, Top Earners
 - Completed **2 DataLemur challenges** including CTE practice with tweet histogram problem
-- Started **SQLZoo More JOIN operations** for continued JOIN practice
-- **SQLZoo movie database practice**: Worked through exercises 1-8 with movie, actor, and casting tables
+- Started **SQLZoo More JOIN operations** for continued JOIN practice: Worked through exercises 1-8
 
 ### Conceptual Learning
 - **CTE introduction**: Learned Common Table Expression syntax and use cases
@@ -75,7 +74,7 @@
 - **Learning**: HackerRank formatting requirements needed `CAST AS DECIMAL(10,4)`
 
 ### DataLemur Tweet Histogram with CTE
-- **Challenge**: Two-step aggregation problem (count tweets per user, then count users per tweet count)
+- **Challenge**: Two-step aggregation problem
 - **Solution**: CTE for first aggregation, main query for second aggregation
 - **Process**: Step 1 - count tweets per user, Step 2 - group by tweet count and count users
 
