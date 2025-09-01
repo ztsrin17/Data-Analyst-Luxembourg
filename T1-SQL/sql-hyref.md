@@ -59,3 +59,44 @@ FROM customers;
 **HAVING vs WHERE Tip:**
 - WHERE filters rows before grouping.
 - HAVING filters after grouping (use for aggregates).
+
+**String Functions:**
+```sql
+SELECT city, LENGTH(city) AS len FROM station;
+SELECT UPPER(LEFT(occupation,1)) FROM occupations;
+```
+
+**Math Functions:**
+```sql
+SELECT ABS(-5);      -- 5
+SELECT year % 2;     -- 0 even, 1 odd
+```
+
+**Date Functions:**
+```sql
+-- Day of week: 0=Sunday
+SELECT EXTRACT(DOW FROM order_date) FROM orders;
+-- Month grouping
+SELECT EXTRACT(MONTH FROM submit_date) AS month, COUNT(*) FROM apps GROUP BY month;
+```
+
+**Subqueries:**
+```sql
+SELECT name FROM employees
+WHERE salary = (SELECT MAX(salary) FROM employees);
+```
+
+**CTE (Common Table Expression):**
+```sql
+WITH totals AS (
+  SELECT dept, SUM(salary) AS dept_total FROM employees GROUP BY dept
+)
+SELECT * FROM totals WHERE dept_total > 100000;
+```
+
+**Window Functions:**
+```sql
+SELECT student_id, score,
+  RANK() OVER (ORDER BY score DESC) AS rnk
+FROM test_scores;
+```

@@ -1,3 +1,6 @@
+Here's your updated SQL cheat sheet with the new concepts from Session 6:
+
+```md
 # SQL Cheat Sheet
 
 ## Database Basics
@@ -107,6 +110,9 @@ ORDER BY sorting_logic;
 -   `NOT BETWEEN val1 AND val2`
 -   `IN (val1, val2, val3)`
 -   `NOT IN (val1, val2, val3)`
+-   `%` (modulo operator): Returns remainder after division
+    -   `year % 2 = 0` → even year
+    -   `year % 2 = 1` → odd year
 
 `IN` shorthand for multiple `OR`, more readable than chained `OR`
 
@@ -130,6 +136,20 @@ WHERE email LIKE '%@gmail.com'
 
 -- Using IN with tuples (cleaner)
 WHERE (subject, year) IN (('Physics', 1970), ('Economics', 1971));
+```
+
+### String Functions
+```sql
+-- LENGTH function: returns character count
+SELECT city, LENGTH(city) AS char_count FROM stations;
+
+-- Finding extremes with LENGTH
+SELECT city FROM station
+WHERE LENGTH(city) = (SELECT MAX(LENGTH(city)) FROM station)
+ORDER BY city ASC LIMIT 1;
+
+-- String extraction and manipulation
+SELECT UPPER(LEFT(occupation, 1)) AS first_letter FROM occupations;
 ```
 
 ### Logical
@@ -236,6 +256,17 @@ WHERE date_column BETWEEN
 
 -- Date only filtering (when column is DATE type)
 WHERE date_column BETWEEN DATE '2022-01-01' AND DATE '2022-12-31'
+```
+
+### Date Arithmetic and Intervals
+```sql
+-- PostgreSQL date arithmetic
+WHERE created_at >= '2020-02-10'::DATE - 30  -- Subtract days
+WHERE created_at >= '2020-02-10'::DATE - INTERVAL '30 days'  -- Returns timestamp
+
+-- Date range filtering pattern
+WHERE created_at >= '2020-02-10'::DATE - 30
+  AND created_at <= '2020-02-10'::DATE
 ```
 
 ### EXTRACT Function for Date Manipulation
@@ -378,6 +409,19 @@ WHERE casting.actorid IN (
 );
 ```
 
+### Extreme Value Finding Pattern
+```sql
+-- Finding records with maximum/minimum calculated values
+SELECT column, LENGTH(column) AS length_alias
+FROM table_name
+WHERE LENGTH(column) = (SELECT MAX(LENGTH(column)) FROM table_name)
+ORDER BY column ASC
+LIMIT 1;
+
+-- Pattern for finding extremes
+WHERE calculated_field = (SELECT MAX/MIN(calculated_field) FROM same_table)
+```
+
 ## Common Table Expressions (CTE)
 A temporary, named result set that makes complex queries more readable. Like giving a nickname to a subquery.
 
@@ -437,6 +481,21 @@ WHERE calc_name meets_criteria;
 
 ## Advanced Concepts
 
+### String Concatenation - Database-Specific Approaches
+```sql
+-- PostgreSQL: CONCAT() function + ::text casting for type conversion
+SELECT CONCAT('There are a total of ', COUNT(occupation)::text, ' ', LOWER(occupation), 's.') AS result
+FROM occupations GROUP BY occupation;
+
+-- MySQL: CONCAT() function (no casting needed)
+SELECT CONCAT('There are a total of ', COUNT(occupation), ' ', LOWER(occupation), 's.') AS result
+FROM occupations GROUP BY occupation;
+
+-- DB2: || operator with CAST() for type conversion
+SELECT 'There are a total of ' || CAST(COUNT(occupation) AS VARCHAR(10)) || ' ' || LOWER(occupation) || 's.' AS result
+FROM occupations GROUP BY occupation;
+```
+
 ### CASE Statements - Conditional Logic
 ```sql
 -- Basic CASE syntax (don't forget END!)
@@ -462,8 +521,19 @@ GROUP BY game.mdate, game.id, game.team1, game.team2;
 - **Boolean conditions required**: WHEN clause needs full boolean expression (not just column names)
 - **Alias limitation**: Cannot reference column aliases within same SELECT statement
 - **CTE solution**: Use CTE when needing to reference calculated values multiple times
+- **Condition ordering**: Order matters - first matching condition wins (important for triangle/geometric logic)
 
 ```sql
+-- Geometric classification with proper condition ordering
+SELECT 
+    CASE
+        WHEN A + B <= C OR A + C <= B OR B + C <= A THEN 'Not A Triangle'  -- Check validity first
+        WHEN A = B AND B = C THEN 'Equilateral'
+        WHEN A = B OR A = C OR B = C THEN 'Isosceles'
+        ELSE 'Scalene'
+    END as triangle_type
+FROM triangles;
+
 -- Multiple conditions in CASE
 SELECT employee_id,
     CASE 
@@ -669,6 +739,23 @@ GROUP BY game.id, game.mdate
 ORDER BY game.id ASC;
 ```
 
+### Multi-Table JOIN Debugging with Visual Tools
+- **Excel workflow**: Use spreadsheet to map and verify JOIN results
+- **Data validation**: Look for impossible relationships (e.g., scores > maximum possible)
+- **Incremental development**: Use `LIMIT` during development for faster debugging
+- **Visual inspection**: Export intermediate results to identify JOIN errors
+
+```sql
+-- Debugging pattern: Build incrementally with LIMIT
+SELECT *
+FROM hackers h
+INNER JOIN submissions s ON h.hacker_id = s.hacker_id
+INNER JOIN challenges c ON s.challenge_id = c.challenge_id
+INNER JOIN difficulty d ON c.difficulty_level = d.difficulty_level
+WHERE s.score = d.score  -- Key validation condition
+LIMIT 5;  -- Remove after validation
+```
+
 ## Tips
 
 ### Performance
@@ -697,6 +784,7 @@ ORDER BY game.id ASC;
 -   **GROUP BY requirement**: All non-aggregated SELECT columns must be in GROUP BY
 -   **Result ordering**: Different GROUP BY orders can affect result row order
 -   **CASE syntax**: Don't forget the END keyword in CASE statements
+-   **CASE condition ordering**: First matching condition wins - order matters for logic like triangle classification
 -   **Automated testing**: Exercise websites can be picky about result formatting/ordering
 -   **Subquery complexity**: Start with simple subqueries before attempting CTEs
 -   **CTE vs Subquery**: CTEs are more readable but subqueries are more universally supported
@@ -707,12 +795,17 @@ ORDER BY game.id ASC;
 -   **SQL Tuple Comparison Limitations**: `(col1, col2) > 50` is invalid; use `col1 > 50 AND col2 > 50` instead
 -   **CASE alias limitation**: Cannot reference column aliases within same SELECT statement
 -   **CTE column naming**: Must alias calculated columns in CTE to reference them later
+-   **String concatenation**: Syntax varies by database (PostgreSQL/MySQL: CONCAT(), DB2: || with CAST)
+-   **Multi-table JOIN validation**: Always verify that join conditions produce logically valid results
+-   **Triangle inequality**: When implementing geometric logic, validate existence before classification
 
 ### Cross-Platform Practice Benefits
 -   **Interface adaptation**: Different platforms (SQLZoo, HackerRank, DataLemur, SQL Fiddle) build flexibility
 -   **Formatting requirements**: Each platform has specific formatting needs (teaches attention to detail)
 -   **Core concept reinforcement**: Same SQL principles apply across all platforms
+-   **Quiz-based learning**: Visual reinforcement complements hands-on coding practice
 
 ### Cross-Domain Knowledge
 -   **Statistics context**: Sample data uses n-1 for standard deviation, population data uses n
 -   **Business Intelligence**: Pivot Tables vs SQL - Pivot Tables are visual and interactive but limited by data size; SQL is scalable and precise but requires technical knowledge
+-   **Excel integration**: Spreadsheets valuable for debugging complex JOINs and visualizing data relationships
