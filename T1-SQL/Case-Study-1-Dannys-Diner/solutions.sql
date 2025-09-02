@@ -1,4 +1,5 @@
 -- solutions.sql for Case-Study-1-Dannys-Diner
+-- NOTE: Run schema.sql first to create database and load data
 
 /* --------------------
    Case Study Questions
@@ -16,3 +17,40 @@
 -- 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
 
 -- There are 2 bonus questions : recreating table outputs
+-- Join All The Things & Rank All The Things
+
+/* ------------------
+   Case Study Answers
+   ------------------*/
+
+--1
+
+SELECT
+	s.customer_id AS customer,
+	SUM(mu.price) AS total_amount_spent
+FROM
+	sales s
+INNER JOIN
+	menu mu ON s.product_id = mu.product_id
+   -- We do not need to join the members table as the question concerns each customer no matter their membership status
+GROUP BY
+	s.customer_id
+ORDER BY
+   total_amount_spent DESC --optional, clean
+;
+
+--2
+
+SELECT
+	s.customer_id AS customer,
+	COUNT(DISTINCT s.order_date) AS days_visited
+      /* Distinct is specified because there can be multiple items bought in one day
+         We want to count the distinct days visited amount and not number of items bought */
+FROM
+	sales s
+   -- No need for JOINs here, everything needed is in sales
+GROUP BY
+	s.customer_id
+ORDER BY
+   days_visited DESC --optional, clean
+;

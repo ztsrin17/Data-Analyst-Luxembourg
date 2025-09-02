@@ -1,6 +1,3 @@
-Here's your updated SQL cheat sheet with the new concepts from Session 6:
-
-```md
 # SQL Cheat Sheet
 
 ## Database Basics
@@ -101,6 +98,63 @@ HAVING aggregate_conditions
 ORDER BY sorting_logic;
 ```
 
+### Advanced JOIN Techniques
+
+### Self-Joins
+**Core concept**: Joining a table to itself to compare different rows or find relationships within the same table.
+
+```sql
+-- Self-join pattern: Find movies with Julie Andrews and their lead actors
+SELECT m.title, lead_actor.name AS leading_actor
+FROM movie m
+JOIN casting julies_role ON m.id = julies_role.movieid    -- First connection
+JOIN actor julie_andrews ON julie_andrews.id = julies_role.actorid
+JOIN casting lead_role ON m.id = lead_role.movieid        -- Self-join (second connection)
+JOIN actor lead_actor ON lead_actor.id = lead_role.actorid
+WHERE julie_andrews.name = 'Julie Andrews'
+AND lead_role.ord = 1;
+
+-- Simplified self-join with standard aliases
+SELECT m.title, a2.name AS leading_actor
+FROM movie m
+JOIN casting c ON m.id = c.movieid     -- First role connection
+JOIN actor a ON a.id = c.actorid
+JOIN casting c2 ON m.id = c2.movieid   -- Self-join for second role
+JOIN actor a2 ON a2.id = c2.actorid
+WHERE a.name = 'Julie Andrews'
+AND c2.ord = 1;
+```
+
+**Self-join mental model**: 
+- Use descriptive aliases (`julies_role` vs `lead_role`) or numbered aliases (`c` vs `c2`)
+- Each alias represents a different "view" of the same table
+- Connect different rows through a common parent entity (movie in this case)
+
+### Self-Join vs Subquery Decision Framework
+
+| **Factor** | **Self-Join** | **Subquery** |
+|------------|---------------|--------------|
+| **Readability** | More complex syntax | More intuitive "first this, then that" logic |
+| **Performance** | Often faster with proper indexing | Can be slower due to temporary lists |
+| **Use Case** | Combining info from multiple rows of same table | Filtering based on related table conditions |
+| **Beginner Friendly** | Harder to conceptualize initially | Easier to understand and write |
+
+```sql
+-- Subquery alternative (often more readable)
+SELECT m.title, a.name AS leading_actor
+FROM movie m
+JOIN casting c ON m.id = c.movieid
+JOIN actor a ON a.id = c.actorid
+WHERE c.ord = 1
+  AND m.id IN (
+    SELECT m2.id
+    FROM movie m2
+    JOIN casting c2 ON m2.id = c2.movieid
+    JOIN actor a2 ON a2.id = c2.actorid
+    WHERE a2.name = 'Julie Andrews'
+  );
+```
+
 ## Operators & Comparisons
 
 ### Numerical
@@ -128,6 +182,7 @@ ORDER BY sorting_logic;
     -   `_` = single character
 -   `IN ('text1', 'text2')` (shorthand for multiple ORs)
 -   All text values must be quoted: `'example'`
+
 ```sql
 WHERE name LIKE 'John%'     -- Starts with "John"
 WHERE name LIKE '%son'      -- Ends with "son"
@@ -136,6 +191,9 @@ WHERE email LIKE '%@gmail.com'
 
 -- Using IN with tuples (cleaner)
 WHERE (subject, year) IN (('Physics', 1970), ('Economics', 1971));
+
+-- String range filtering (alphanumeric ordering)
+WHERE constituency BETWEEN 'S14000021' AND 'S14000026';  -- Works with consistent prefixes
 ```
 
 ### String Functions
@@ -409,6 +467,57 @@ WHERE casting.actorid IN (
 );
 ```
 
+### Advanced Subquery Patterns
+
+### Two-Step Logical Thinking for Complex Queries
+**Pattern**: Break complex requirements into separate conditions that apply to different rows
+
+```sql
+-- Mental framework: "Find all movies that have Julie Andrews and their lead actor"
+-- Step 1: Which movies have Julie Andrews? (any role)
+-- Step 2: For those movies, who is the lead actor? (ord = 1)
+
+-- Subquery approach (runs inner query first)
+SELECT m.title, a.name AS leading_actor
+FROM movie m
+JOIN casting c ON m.id = c.movieid
+JOIN actor a ON a.id = c.actorid
+WHERE c.ord = 1
+  AND m.id IN (
+    -- Step 1: Find Julie Andrews movies
+    SELECT m2.id
+    FROM movie m2
+    JOIN casting c2 ON m2.id = c2.movieid
+    JOIN actor a2 ON a2.id = c2.actorid
+    WHERE a2.name = 'Julie Andrews'
+  );
+```
+
+### Relationship Traversal Pattern
+```sql
+-- Pattern: Find related records through intermediate tables
+-- Example: "Find all people who worked with Art Garfunkel"
+
+SELECT DISTINCT a.name
+FROM movie m
+JOIN casting c ON m.id = c.movieid
+JOIN actor a ON a.id = c.actorid
+WHERE m.id IN (
+    SELECT m2.id
+    FROM movie m2
+    JOIN casting c2 ON m2.id = c2.movieid
+    JOIN actor a2 ON a2.id = c2.actorid
+    WHERE a2.name = 'Art Garfunkel'
+  )
+  AND a.name != 'Art Garfunkel';  -- Exclude target person
+```
+
+### Subquery Execution Order Understanding
+- **Inner query executes first**: Creates filter list (e.g., list of movie IDs)
+- **Outer query uses result**: Filters based on the list created by inner query
+- **Performance consideration**: Subquery creates temporary list in memory
+- **Alternative**: Self-joins can be more efficient with proper indexing
+
 ### Extreme Value Finding Pattern
 ```sql
 -- Finding records with maximum/minimum calculated values
@@ -476,6 +585,16 @@ WITH calculations AS (
 SELECT base_columns, calc_name,
        additional_calculations_using_calc_name
 FROM calculations
+WHERE calc_name meets_criteria;
+
+-- Alternative: Subquery in FROM when CTE not supported
+SELECT base_columns, calc_name
+FROM (
+    SELECT base_columns,
+           calculated_expression AS calc_name
+    FROM source_table
+    WHERE conditions
+) AS calculations
 WHERE calc_name meets_criteria;
 ```
 
@@ -602,10 +721,61 @@ SELECT student_id, score,
     DENSE_RANK() OVER (ORDER BY score DESC) as dense_rank
 FROM test_scores;
 
--- Ranking within groups
+-- Ranking within groups (PARTITION BY)
 SELECT category, product_name, price,
     RANK() OVER (PARTITION BY category ORDER BY price DESC) as price_rank
 FROM products;
+
+-- Political election ranking by constituency
+SELECT 
+    constituency,
+    party,
+    votes,
+    RANK() OVER (
+        PARTITION BY constituency
+        ORDER BY votes DESC
+    ) AS posn
+FROM election_results
+WHERE constituency BETWEEN 'S14000021' AND 'S14000026'
+    AND yr = 2017;
+```
+
+### Advanced Window Function Patterns
+```sql
+-- Finding winners only (rank = 1)
+SELECT constituency, party
+FROM (
+    SELECT
+        constituency,
+        party,
+        RANK() OVER (
+            PARTITION BY constituency
+            ORDER BY votes DESC
+        ) AS posn
+    FROM election_results
+    WHERE constituency LIKE 'S%' AND yr = 2017
+) AS ranked_results
+WHERE posn = 1
+ORDER BY constituency;
+
+-- Combining window functions with aggregation
+SELECT 
+    party,
+    COUNT(*) AS seats_won
+FROM (
+    SELECT
+        constituency,
+        party,
+        RANK() OVER (
+            PARTITION BY constituency
+            ORDER BY votes DESC
+        ) AS posn
+    FROM election_results
+    WHERE constituency LIKE 'S%' AND yr = 2017
+) AS winners
+WHERE posn = 1
+GROUP BY party
+ORDER BY seats_won DESC;
 ```
 
 ### Window Function Applications
@@ -662,6 +832,8 @@ WHERE EXISTS (
 SELECT DISTINCT column1, column2 FROM table;
 -- Returns unique combinations only
 -- Important in JOINs to avoid duplicate results
+-- Essential when finding co-workers or related people
+SELECT DISTINCT a.name FROM actor a WHERE conditions;
 ```
 
 ### ORDER BY
@@ -678,6 +850,7 @@ ORDER BY column1 ASC, column2 DESC;
 ```sql
 LIMIT 10 OFFSET 20;
 -- Skip first 20 rows, return next 10 (pagination)
+-- Useful for development: LIMIT 5 for faster query testing
 ```
 
 ## Professional Query Writing
@@ -709,6 +882,7 @@ ORDER BY g.mdate ASC, g.id ASC;
 - **Table relationship mapping**: Drawing out foreign key connections before writing JOINs
 - **CTE for readability**: Using CTEs when calculations needed multiple times
 - **Alternative solution exploration**: Considering different approaches (nested CASE vs CTE)
+- **Two-step logical thinking**: Breaking complex requirements into "first this, then that" logic
 
 ### Debugging Strategy
 **Step-by-step approach**:
@@ -717,6 +891,7 @@ ORDER BY g.mdate ASC, g.id ASC;
 3. Verify data types and case sensitivity match
 4. Test individual components before combining
 5. Add ORDER BY for consistent result ordering
+6. Use LIMIT during development for faster iteration
 
 ```sql
 -- Step 1: Check if matches exist
@@ -762,6 +937,7 @@ LIMIT 5;  -- Remove after validation
 -   **Performance**: Use WHERE to filter before SELECT and GROUP BY
 -   **JOIN strategy**: Choose central table as FROM for multi-table JOINs
 -   **WHERE vs HAVING efficiency**: Use WHERE for GROUP BY columns when possible (filters before grouping)
+-   **Self-join vs Subquery**: Self-joins often faster with proper indexing; subqueries more readable
 
 ### Readability  
 -   **Readability**: Use IN instead of multiple ORs
@@ -769,11 +945,19 @@ LIMIT 5;  -- Remove after validation
 -   **Consistent aliases**: Use meaningful, consistent table aliases
 -   **Vertical formatting**: Stack columns and clauses vertically
 -   **Explicit columns**: Never SELECT *, always specify columns
+-   **Descriptive aliases**: Use meaningful names (`julies_role` vs `c1`) for self-joins
 
 ### JOIN Debugging
 - **INNER vs OUTER**: INNER excludes rows without matches, OUTER includes them with NULLs
 - **Missing data detection**: Use LEFT JOIN to find records without matches
 - **Multiple conditions**: Use OR in JOIN conditions for complex matching scenarios
+- **Self-join conceptualization**: Think of each alias as a different "view" of the same table
+
+### Advanced Query Patterns
+- **Two-step thinking**: Break complex requirements into separate conditions
+- **Relationship traversal**: Use subqueries to follow foreign key chains
+- **Window function combinations**: Combine PARTITION BY with GROUP BY for advanced analytics
+- **CTE alternatives**: Use subquery in FROM clause when CTE not supported
 
 ### Common Pitfalls
 -   **Case sensitivity**: Varies by database (use COLLATE for special handling)
@@ -798,14 +982,22 @@ LIMIT 5;  -- Remove after validation
 -   **String concatenation**: Syntax varies by database (PostgreSQL/MySQL: CONCAT(), DB2: || with CAST)
 -   **Multi-table JOIN validation**: Always verify that join conditions produce logically valid results
 -   **Triangle inequality**: When implementing geometric logic, validate existence before classification
+-   **Self-join confusion**: Use descriptive aliases and step-by-step thinking to avoid confusion
+-   **DISTINCT necessity**: Remember DISTINCT when finding co-workers or related people to avoid duplicates
+-   **Exclusion filtering**: Don't forget to exclude the target person when finding co-workers (`AND name != 'Target'`)
+-   **String range filtering**: BETWEEN works with alphanumeric strings when prefix/padding consistent
+-   **Platform limitations**: Different SQL platforms have varying syntax support and formatting requirements
 
 ### Cross-Platform Practice Benefits
--   **Interface adaptation**: Different platforms (SQLZoo, HackerRank, DataLemur, SQL Fiddle) build flexibility
+-   **Interface adaptation**: Different platforms (SQLZoo, HackerRank, DataLemur, SQL Fiddle, W3Resource) build flexibility
 -   **Formatting requirements**: Each platform has specific formatting needs (teaches attention to detail)
 -   **Core concept reinforcement**: Same SQL principles apply across all platforms
 -   **Quiz-based learning**: Visual reinforcement complements hands-on coding practice
+-   **Platform critique skills**: Learning to identify poorly designed exercise platforms vs well-designed ones
 
 ### Cross-Domain Knowledge
 -   **Statistics context**: Sample data uses n-1 for standard deviation, population data uses n
 -   **Business Intelligence**: Pivot Tables vs SQL - Pivot Tables are visual and interactive but limited by data size; SQL is scalable and precise but requires technical knowledge
 -   **Excel integration**: Spreadsheets valuable for debugging complex JOINs and visualizing data relationships
+-   **Performance analysis**: Understanding when self-joins outperform subqueries and vice versa
+-   **Data modeling**: Recognizing linking table patterns (movie-actor-casting relationships)
