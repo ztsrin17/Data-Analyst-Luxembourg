@@ -152,8 +152,86 @@ LIMIT 1
 
 -- 5. Which item was the most popular for each customer?
 
-   -- Interpretation 1: What is the most popular "first purchase" after becoming a member?
+   -- Original:
+
+WITH customer_purchases AS ( --CTE1
+    SELECT
+        s.customer_id,
+        s.product_id,
+        COUNT(*) AS purchase_count -- Counting how many times each product has been purchased by each customer
+    FROM sales s
+     -- No JOIN for membership status, no date WHERE filter either
+    GROUP BY
+        s.customer_id,
+        s.product_id
+),
+ranked_favorites AS ( --CTE2
+    SELECT
+        cs.customer_id,
+        cs.product_id,
+        cs.purchase_count,
+        RANK() OVER ( -- RANK instead of ROW_NUMBER in case of equals
+            PARTITION BY cs.customer_id -- We want to distinguish favorite item per customer so we partition
+            ORDER BY cs.purchase_count DESC -- Favorite = highest count
+        ) AS fav_rank
+    FROM customer_purchases cs -- We are using CTE1 which as COUNTed already
+)
+SELECT
+    rf.customer_id,
+    mu.product_name,
+    rf.purchase_count
+FROM ranked_favorites rf -- Abbreviation required for follow-up JOIN
+INNER JOIN menu mu ON rf.product_id = mu.product_id -- Late JOIN of menu only for full product names
+WHERE
+    rf.fav_rank = 1 -- We only want the favorite item
+ORDER BY
+    rf.purchase_count DESC, -- The goal, the favorite items
+    rf.customer_id ASC -- Per customer, extra sorting
+;
    
+   -- Alternative: What is the most popular item (favorite item) for each customer post-membership?
+
+WITH post_membership_purchases AS ( --CTE1
+    SELECT
+        s.customer_id,
+        s.product_id,
+        COUNT(*) AS purchase_count -- Counting how many times each product has been purchased by each member
+    FROM sales s
+    INNER JOIN members m ON s.customer_id = m.customer_id  -- We are limiting to members-only
+    WHERE
+        s.order_date >= m.join_date  -- Only looking at orders after joining
+            -- (As mentioned in readme.md: we have no exit_date for membership, but it would be filtered here as well)
+    GROUP BY
+        s.customer_id,
+        s.product_id
+),
+ranked_favorites AS ( --CTE2
+    SELECT
+        pmp.customer_id,
+        pmp.product_id,
+        pmp.purchase_count,
+        RANK() OVER ( -- RANK instead of ROW_NUMBER in case of equals
+            PARTITION BY pmp.customer_id -- We want to distinguish favorite item per member so we partition
+            ORDER BY pmp.purchase_count DESC -- Favorite = highest count
+        ) AS fav_rank
+    FROM post_membership_purchases pmp -- We are only using the table of post-membership orders which has COUNTed already
+)
+SELECT
+    rf.customer_id,
+    mu.product_name,
+    rf.purchase_count
+FROM ranked_favorites rf -- Abbreviation required for follow-up JOIN
+INNER JOIN menu mu ON rf.product_id = mu.product_id -- Late JOIN of menu only for full product names
+WHERE
+    rf.fav_rank = 1 -- We only want the favorite item
+ORDER BY
+    rf.purchase_count DESC, -- The goal, the favorite items
+    rf.customer_id ASC -- Per member, extra sorting
+;
+
+
+-- 6. Which item was purchased first by the customer after they became a member?
+
 WITH member_first_purchases AS (
     SELECT
         s.customer_id,  -- PARTITION BY
@@ -165,10 +243,10 @@ WITH member_first_purchases AS (
                 s.order_date ASC -- ASC to sort by oldest order first
         ) AS purchase_rank
     FROM sales s
-    INNER JOIN members m ON s.customer_id = m.customer_id
+    INNER JOIN members mb ON s.customer_id = mb.customer_id
         -- Since it's an INNER JOIN we are already excluding non-members from the query
     WHERE
-        s.order_date >= m.join_date  -- Issue: order_date is on same day as join_date but the purchases happened before joining
+        s.order_date >= mb.join_date  -- Issue: order_date is on same day as join_date but the purchases happened before joining
          -- fix: If you purchased on the same day as joining you get the bonus/points/etc.
 )
 SELECT
@@ -182,16 +260,8 @@ WHERE
 GROUP BY
     mu.product_name
 ORDER BY
-    times_as_first_purchase DESC
+    times_as_first_purchase DESC -- Looks better
 ;
-   
-   -- Interpretation 2: What is the most popular item (favorite item) for each customer post-membership?
-
-
-
-
--- 6. Which item was purchased first by the customer after they became a member?
-
 
 
 -- 7. Which item was purchased just before the customer became a member?

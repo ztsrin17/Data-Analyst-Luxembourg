@@ -206,29 +206,104 @@ The most purchased item on the menu is Ramen at 8 times.
 
 ### 5. Which item was the most popular for each customer?
 
+NOTE
+Doing Q5 I realized I did not look at it correctly, and thought it was asking most popular item for each customer post-membership.
+The following, answering that question, is quasi-identical to the query for the real Q5, only had to remove one JOIN and one WHERE filter.
+Either way working out a double CTE took time. The experience was well appreciated.
+
+In solutions.sql I kept the logical order (true Q5, alternative) and decided to follow suit here.
+
+#### True Q5: Which item was the most popular for each customer?
+
+We can refer to the code below and disregard members table, so:
+    - remove JOIN members mb (etc)
+    - remove WHERE order_date & join_date
+
+The rest can stay as is.
+
+#### Bonus: What keeps customers coming back after becoming members?
+
 #### Approach
 
+One hiccup with our data for questions like these is we cannot determine which is first between s.order_date & mb.join_date if the date is identical.
+Did a customer place said order, became a member, then placed his first 'member' order right after, or on a future date?
+Did a customer become a member, placed said order?
+
+Since there is no way of knowing, we will go with this scenario:
+A customer was a member for the order on the same date as joining.
+The owner could have set-up a system that retroactively rewards/counts an order on the same date as joining, even if it was placed first.
+
+For these we could only **JOIN** sales with members table, but to refer to the item by name we will also **JOIN** the menu table.
+The first occasion to have all 3 tables joined in this case study!
+An idea: we will only **JOIN** the menu table at the end as it is not needed for the first part, which will be a CTE again to determine first purchase (via **RANK** in case of multiple items, which I believe always matters)
+
+We'll use:
+    - s.customer_id, s.order_date, s.product_id from sales s table
+    - mb.customer_id, mb.join_date from members mb table
+    - mu.product_id, mu.product_name from menu mu table (only to identify products by their name)
+
+We want to answer and identify these:
+    - Determine what are the orders after a customer has become a member
+    - For each member, count how many times each product has been purchased
+    - For each member, select the product that has been purchased the most (their favorite)
+
+(In the case a member quits being a member we would require a leave_date and only look at purchases between join & leave date, but this is not yet the case in Danny's Diner Case scenario.)
+    
+To do so we can:
+    - A first CTE to:
+        COUNT how many times each s.customer_id has bought which s.product_id (the count will be **AS** purchase_count)
+        filtered by **WHERE** s.order_date >= mb.join_date
+    - A second CTE, **FROM** previous_CTE
+        **RANK() OVER (PARTITION BY** customer_id **ORDER BY** purchase_count DESC (**AS** favorite_rank)
+        partition is *again important* as we are looking at each customer (member) independently
+        (this queries product favoritism per customer)
+    Final **SELECT** will just need to
+    - **JOIN** menu to better identify products by name in final query
+    - Filter by rank 1
+    - **ORDER BY** what we want to know: most bought, customer id
 
 
 #### Findings
 
-*Interpretation 1: What is the most popular "first purchase" after becoming a member?*
-    Sushi and Curry are the 2 most popular "first purchase"s after becoming a member.
+The most popular item (favorite item) for each customer is:
+    - Ramen for Customer A
+    - Ramen for Customer C
+    - Sushi, Curry and Ramen for Customer B
 
-*Interpretation 2: What is the most popular item (favorite item) for each customer post-membership?*
-    
+The most popular item for each customer post-membership is:
+    - Ramen for Customer A & B
 
 ---
 
 ### 6. Which item was purchased first by the customer after they became a member?
 
+Why are customers deciding to become members?
+
 #### Approach
 
+We'll use:
+    - s.customer_id, s.order_date, s.product_id from sales s table
+    - mb.customer_id, mb.join_date from members mb table
+    - mu.product_id, mu.product_name from menu mu table (only to identify products by their name)
+    
+We want to answer and identify these:
+    - Determine the first order(s) after a customer becomes a member
+    
+To do so we can:
+    - Query from a CTE
+        **RANK() OVER (PARTITION BY** s.customer_id **ORDER BY** s.order_date ASC
+        partition is important as we are looking at each customer (member) independently
+        filtered by **WHERE** s.order_date >= mb.join_date
+    (we'll use **RANK**)
+    - Outer SELECT will have a **GROUP BY** mu.product_name and **COUNT** them
+    - Filter by rank 1
+    - **ORDER BY** the above **COUNT**
 
 
 #### Findings
 
-
+Sushi and Curry are the 2 most popular "first purchase"s after becoming a member.
+(Bonus: We can see the most popular first purchase post-membership differed from the favorite item post-membership.)
 
 ---
 
