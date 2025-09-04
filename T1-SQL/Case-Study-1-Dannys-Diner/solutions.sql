@@ -82,7 +82,48 @@ WHERE purchase_row = 1
 
 -- 4. What is the most purchased item on the menu and how many times was it purchased by all customers?
 
+-- Note: Proceeding with a CTE to list multiple 'most purchased item' if needed, as all of the items would matter in this case.
 
+WITH product_purchases AS (
+    SELECT
+        mu.product_name,
+        mu.price,
+        COUNT(mu.product_id) AS total_purchases,
+        RANK() OVER (
+               --no partition needed as we're not comparing counts between categories here
+            ORDER BY
+                COUNT(mu.product_id) DESC,
+                mu.price DESC
+	) AS purchase_rank
+    FROM sales s
+    INNER JOIN menu mu ON s.product_id = mu.product_id
+    GROUP BY
+        mu.product_name,
+        mu.price
+)
+SELECT
+    product_name,
+    total_purchases,
+    price --bonus information, facilitating understanding the 2nd sorting order (mu.price)
+FROM product_purchases
+WHERE purchase_rank = 1
+;
+
+-- Alternative, only a single result is possible:
+
+SELECT
+   mu.product_name,
+   COUNT(mu.product_id) AS total_purchases
+FROM sales s
+INNER JOIN menu mu ON s.product_id = mu.product_id
+GROUP BY
+   mu.product_name
+ORDER BY
+   COUNT(mu.product_id) DESC,
+   mu.price DESC,  --tie-breaker
+   mu.product_name --tie-breaker 2
+LIMIT 1
+;
 
 -- 5. Which item was the most popular for each customer?
 
