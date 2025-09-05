@@ -266,16 +266,119 @@ ORDER BY
 
 -- 7. Which item was purchased just before the customer became a member?
 
-
+WITH member_last_purchases AS (
+    SELECT
+        s.customer_id,  -- PARTITION BY
+        s.product_id,   -- KEY for outer SELECT join
+        RANK() OVER (
+            PARTITION BY    -- Necessary for each customer seperation
+                s.customer_id
+            ORDER BY
+                s.order_date DESC -- DESC to rank by most recent
+        ) AS purchase_rank
+    FROM sales s
+    INNER JOIN members mb ON s.customer_id = mb.customer_id
+        -- Since it's an INNER JOIN we exclude non-members from the query
+    WHERE
+        s.order_date < mb.join_date -- s.order_date has to be before a join date this time
+)
+SELECT
+    mu.product_name,
+    COUNT(mu.product_name) AS times_as_first_purchase,
+	mlp.customer_id
+FROM member_last_purchases mlp -- Abbreviation required for follow-up JOIN
+INNER JOIN menu mu ON mlp.product_id = mu.product_id
+    -- We only needed to identify by name in this late stage
+WHERE
+    mlp.purchase_rank = 1 -- Filter to only most recent purchase(s) of each member
+GROUP BY
+    mu.product_name,
+	mlp.customer_id
+ORDER BY
+    times_as_first_purchase DESC, -- Looks better
+    mlp.customer_id ASC -- optional
+;
 
 -- 8. What is the total items and amount spent for each member before they became a member?
 
-
+WITH purchases_pre_membership AS (
+    SELECT
+        s.customer_id,  -- PARTITION BY
+        s.product_id,   -- KEY for outer SELECT join
+        COUNT(s.product_id) AS count_per_product
+    FROM sales s
+    INNER JOIN members mb ON s.customer_id = mb.customer_id
+        -- Since it's an INNER JOIN we exclude non-members from the query
+    WHERE
+        s.order_date < mb.join_date -- s.order_date has to be before a join date this time
+	GROUP BY
+		s.customer_id,
+		s.product_id
+)
+SELECT
+	mprem.customer_id,
+	SUM(mu.price * mprem.count_per_product) AS total_amount_spent,  -- SUM price of all products bought 
+    SUM(mprem.count_per_product) AS total_items_bought -- SUM count of all products bought	
+FROM purchases_pre_membership mprem -- Abbreviation required for follow-up JOIN
+INNER JOIN menu mu ON mprem.product_id = mu.product_id
+    -- We only needed to identify by name and use the value of each product in this late stage
+GROUP BY
+    mprem.customer_id
+ORDER BY
+	total_amount_spent DESC,
+	total_items_bought ASC,
+	mprem.customer_id ASC
+	-- Sorting is by highest value spender per least items bought, lastly alphabetically
+;
 
 -- 9.  If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have?
 
-
+SELECT
+    s.customer_id,
+    SUM(
+        CASE
+            WHEN mu.product_name = 'sushi' THEN mu.price * 10 * 2 -- 10 points per $1, 2x multiplier for sushi
+            -- case-sensitive
+            ELSE mu.price * 10 -- 10 points per $1, no multiplier
+		END
+	) AS total_score
+FROM sales s
+INNER JOIN menu mu ON s.product_id = mu.product_id
+GROUP BY
+    s.customer_id
+ORDER BY
+    total_score DESC, -- highest points first
+    s.customer_id -- alphabetical
+;
 
 -- 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
 
+SELECT
+    s.customer_id,
+    SUM(
+        CASE
+            WHEN mu.product_name = 'sushi' THEN mu.price * 10 * 2 -- 10 points per $1, 2x multiplier for sushi
+            WHEN
+                ((mu.product_name != 'sushi') AND
+                 (s.order_date BETWEEN mb.join_date AND DATE(mb.join_date, '+6 days')) -- 1 week including join_date, so +6 days
+                 )
+                THEN mu.price * 10 * 2 -- Same scoring system as sushi 1 week after becoming member for every item
+            ELSE mu.price * 10 -- 10 points per $1, no multiplier
+		END
+	) AS total_score
+FROM sales s
+INNER JOIN menu mu ON s.product_id = mu.product_id
+INNER JOIN members mb ON s.customer_id = mb.customer_id
+WHERE s.order_date < '2021-02-01' -- String comparison works for ISO dates (YYYY-MM-DD)
+GROUP BY
+    s.customer_id
+ORDER BY
+    total_score DESC, -- highest points first
+    s.customer_id -- alphabetical
+;
 
+/* If we want to answer the above to include all customers
+and not only members we only need to change the
+INNER JOIN members to a LEFT JOIN members.
+CASE WHEN ordering can be slightly changed as well
+for larger databases/runtime efficiency? or clarity */

@@ -42,6 +42,9 @@ A sample dataset is provided due to privacy concerns.
 
 - **SQL** for data querying and analysis.
 - **DB Browser for SQLite** as the database management tool.
+- **HACKMD.io**
+- **GitHub**
+- **VSCode** 
 
 ## Methodology & Solutions
 
@@ -213,7 +216,9 @@ Either way working out a double CTE took time. The experience was well appreciat
 
 In solutions.sql I kept the logical order (true Q5, alternative) and decided to follow suit here.
 
-#### True Q5: Which item was the most popular for each customer?
+### True Q5: Which item was the most popular for each customer?
+
+#### Approach
 
 We can refer to the code below and disregard members table, so:
     - remove JOIN members mb (etc)
@@ -221,7 +226,7 @@ We can refer to the code below and disregard members table, so:
 
 The rest can stay as is.
 
-#### Bonus: What keeps customers coming back after becoming members?
+### Bonus Q5: What keeps customers coming back after becoming members?
 
 #### Approach
 
@@ -303,7 +308,7 @@ To do so we can:
 #### Findings
 
 Sushi and Curry are the 2 most popular "first purchase"s after becoming a member.
-(Bonus: We can see the most popular first purchase post-membership differed from the favorite item post-membership.)
+(Bonus: We can see the most popular first purchase post-membership differs from the favorite item post-membership.)
 
 ---
 
@@ -311,11 +316,30 @@ Sushi and Curry are the 2 most popular "first purchase"s after becoming a member
 
 #### Approach
 
+Based on the question we will need to use the following:
+    - s.customer_id, s.order_date, s.product_id from sales s
+    - mu.product_id, mu.product_name from menu mu (for query result readability)
+    - mb.customer_id, mb.join_date from members mb
 
+We want to find out these:
+    - Purchases before joining membership (exclude non-members), per customer (now member)
+    - Determine the most recent/last one before joining
+    
+We can recognize this question to be very similar to Q6 (first purchase post-membership, here last purchase pre-membership).
+Let's keep the same idea with multiple items allowed and proceed with the same method/query edited with these changes:
+- in the CTE:
+    -- **RANK() OVER (...)** will have **ORDER BY** s.order_date DESC
+    (most-recent first)
+    -- filter **WHERE** changed to s.order_date < mb.join_date
+    (sticking to logic same-day is post-membership, so it has to precede it)
+- in final SELECT:
+    -- adding mfp.customer_id in **SELECT** & **GROUP BY**
+    (cleaner to present what was/were the last purchase(s) pre-membership for each customer)
 
 #### Findings
 
-
+Customer A's last purchases before becoming a member were Sushi and Curry.
+Customer B's last purchase before becoming a member was Sushi.
 
 ---
 
@@ -323,11 +347,22 @@ Sushi and Curry are the 2 most popular "first purchase"s after becoming a member
 
 #### Approach
 
-
+We will be using these:
+    - s.customer_id, s.order_date, s.product_id from sales s
+    - mu.product_id, mu.product_name, mu.price from menu mu
+    - mb.customer_id, mb.join_date from members mb
+    
+So all of the data is required.
+We will:
+    - Determine purchases by each member (exclude non-members), BEFORE membership (in a CTE)
+    - **COUNT**() each product_id as total items bought per customer
+    - **SUM**() the products bought count times mu.price
+    - **SELECT** set to show member, SUM of total spent, SUM of total count of products bought.
 
 #### Findings
 
-
+Before becoming a member Customer A spent $40 for 3 menu items.
+Before becoming a member Customer B spent $25 for 2 menu items.
 
 ---
 
@@ -335,24 +370,82 @@ Sushi and Curry are the 2 most popular "first purchase"s after becoming a member
 
 #### Approach
 
+Looking at this question we can note it's only about customers so we will not need members mb table.
+We will need:
+    - s.customer_id, s.product_id from sales s
+    - mu.product_id and mu.price from menu mu
 
+We don't need s.order_date since this concerns every order, nor mu.product_name.
+
+Let's go about it this way:
+    - **CASE WHEN**... scoring condition specific to 'sushi' (case-sensitive)
+    - **ELSE**... for the other products.
+    - **SUM** the score, using scoring system rules (**CASE WHEN**) & mu.price values already integrated in CASE WHEN
+    - **GROUP BY** each customer
+    - **SELECT** customer, total_score
+    - **ORDER BY** total_score DESC, alphabetically
 
 #### Findings
 
-
+Customer B has the highest score with 940.
+Customer A is a close second with 860.
+Customer C is last with only 360.
 
 ---
 
-### 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B 
-have at the end of January?
+### 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
 
 #### Approach
 
+Lots of criterias to meet here.
 
+This time we'll need all of the data again:
+    - s.customer_id, s.order_date, s.product_id from sales s
+    - mu.product_id, mu.product_name, mu.price from menu mu
+    - mb.customers_id, mb.join_date from members mb
+
+The query uses elements we've already coded out previously so there's not a lot to come up with. This will resemble Q9 answer the most with **CASE WHEN** for scoring, just with an extra condition, members table join, and extra date filter.
+
+How we can write out that 1-week period (s.order_date BETWEEN join_date AND join_date + 6) will be as:
+**WHERE** s.order_date **BETWEEN** mb.join_date AND mb.join_date + **INTERVAL** '6 days'
+
+\\
+\\
+I remember date functions vary greatly between SQLs, the above is for PostgreSQL but for this case study I'm using DB Browser for SQLite so I looked up the correct syntax:
+
+**WHERE** s.order_date **BETWEEN** mb.join_date **AND DATE**(mb.join_date, '+6 days')
+\\
+\\
+
+A quick test with SQLite:
+
+```sql!
+SELECT
+    s.customer_id,
+    s.order_date
+FROM sales s
+INNER JOIN members mb ON s.customer_id = mb.customer_id
+WHERE s.order_date BETWEEN mb.join_date AND DATE(mb.join_date, '+6 days')
+;
+```
+
+Results:
+
+customer_id, order_date
+A	2021-01-07
+A	2021-01-10
+A	2021-01-11
+A	2021-01-11
+B	2021-01-11
+
+
+final **SELECT** composed of customer_id, SUM total_scores
+filtered by **WHERE** s.order_date < '2021-02-01' (we want the score at the end of January, string comparison works for ISO dates (YYYY-MM-DD)
 
 #### Findings
 
-
+Customer A has a total score of 1370.
+Customer B has a total score of 820.
 
 ---
 
@@ -382,41 +475,43 @@ have at the end of January?
 
 After analyzing the initial sales data, several key customer profiles have emerged:
 
-**Insight 1: Customer A is the "High-Value Spender."**
-    - While only visiting 4 times (Finding from Q2), they have the highest total spend of $76 (Finding from Q1). This indicates a high average spend per visit.
-    - On their first visit, Customer A purchased Curry (their most expensive purchase) and Sushi (Finding from Q3), suggesting a willingness to try different items or an appreciation for a varied meal.
+**Insight 1: Customer A is a "Premium Patron"**
+    - While only visiting 4 times (Finding from Q2), they have the highest spending power at $76 (Finding from Q1). This indicates a high average spend per visit.
+    - On their first visit, Customer A purchased Curry (the most expensive menu item) and Sushi (Finding from Q3), suggesting a willingness to try different items or an appreciation for a varied meal no matter the item price.
+    - Although initially exploring both premium Curry and Sushi on their first visit (Finding Q3), Customer A has developed a clear preference for Ramen over time (Finding Q5).
 
 **Insight 2: Customer B is the "Loyal Regular."**
     - They are the most frequent visitor with 6 visits (Finding from Q2), but their total spending is slightly lower at $74 (Finding from Q1).
     - Their initial purchase was Curry (Finding from Q3), indicating a preference for a popular and perhaps more substantial dish from the outset.
+    - Customer B shows a broad appreciation for the menu, having purchased Sushi, Curry, and Ramen equally (Finding Q5), further reinforcing their loyalty and willingness to try various offerings.
 
 **Insight 3: Customer C may be a "Ramen Enthusiast."**
     - Customer C's first purchase was two Ramen dishes (Finding from Q3), highlighting an immediate and strong preference for this specific item.
-    (note for futre ref: it might also be a fluke if follow-up visits they did not purchase this)
+    - However, their overall engagement is low; they are the lowest spender with only one additional visit where Ramen was again purchased (Findings Q1, Q2, Q5), suggesting limited overall attraction beyond their initial specific interest.
+    - This pattern suggests their interest is narrowly focused on a single menu item, making them a potential churn risk if their preferences change or are not met.
 
 
 **Strategic Recommendations:**
 
-1.  **For Customer A:** The business objective should be to **increase visit frequency**.
-        - Targeted "we miss you" campaign
-        - Special offer after a certain number of days
-
-2.  **For Customer B:** The objective should be to **increase average spend per visit**.
-        - Recommendations could include upselling high-margin items
-        - Presenting combo deals encouraging a higher cart value.
-
-3.  **For Customer C:** The objective could possibly be to **leverage their specific preference for Ramen**.
 
 **The Menu, insights and strategies:**
 
 1.  **Curry:** 
-        - The most expensive item.
-        - The 2nd most bought item (although 50% less than 1st most bought)
+    Popularity: 2nd most popular (Finding Q4).
+    Price Point: Most expensive item.
+    Role in the Menu: The luxury menu item.
 
 2.  **Ramen:** 
-        - The second-most expensive item.
-        - The most bought item (capitalize on this)
+    Popularity: Ramen is by far the most popular item on the mnu (Finding Q4).
+    Price Point: 2nd most expensive.
+    Role in the Menu: The star menu item, the favorite item.
 
 3.  **Sushi:** 
-        - The cheapest item (still at 66% price of the most expensive item)
-        - The least bought item (not even bought half as many times as the most bought item)
+    Popularity: Least popular (Finding Q4).
+    Price Point: Cheapest.
+    Role in the Menu: The quick bite or the overlooked option.
+    
+
+**Strategic Recommendations:**
+
+
