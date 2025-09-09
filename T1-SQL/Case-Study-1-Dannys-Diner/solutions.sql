@@ -303,7 +303,7 @@ ORDER BY
 
 WITH purchases_pre_membership AS (
     SELECT
-        s.customer_id,  -- PARTITION BY
+        s.customer_id,
         s.product_id,   -- KEY for outer SELECT join
         COUNT(s.product_id) AS count_per_product
     FROM sales s
@@ -382,3 +382,27 @@ and not only members we only need to change the
 INNER JOIN members to a LEFT JOIN members.
 CASE WHEN ordering can be slightly changed as well
 for larger databases/runtime efficiency? or clarity */
+
+-- Extra 1: Join all the things.
+
+SELECT
+    s.customer_id,
+    s.order_date,
+    mu.product_name,
+    mu.price,
+    CASE
+        WHEN mb.join_date IS NULL THEN 'N'  -- Instantly exclude if not a membered purchase
+        WHEN mb.join_date > s.order_date THEN 'N' -- Exclude if purchase is done before joining
+        ELSE 'Y'
+    END AS member
+FROM sales s
+INNER JOIN menu mu ON s.product_id = mu.product_id
+LEFT JOIN members mb ON s.customer_id = mb.customer_id
+ORDER BY
+    s.customer_id ASC,
+    s.order_date ASC,
+    mu.product_name ASC
+;
+
+-- Extra 2: Rank all the things.
+

@@ -5,10 +5,10 @@ Source of case: https://8weeksqlchallenge.com/case-study-1/
 Although the name of this website states 8 weeks we are going to be doing a faster pace. 
 It will then weave itself into Excel and Python. 
 
-To reproduce my analysis, first run the schema.sql script to build and populate the database.  
-Then, you can run the queries in solutions.sql to see the answers to the case study questions.  
-
-To be updated.
+**How to Use This Repository**
+    **Case Study Source:** [8 Week SQL Challenge - Case Study #1](https://8weeksqlchallenge.com/case-study-1/)
+    **Solutions:** The final, commented SQL queries can be found in the [`solutions.sql`](./solutions.sql) file.
+    **Database Setup:** The `schema.sql` file contains all the necessary code to build and populate the SQLite database.
 
 ## Business Problem
 
@@ -231,7 +231,7 @@ The rest can stay as is.
 #### Approach
 
 One hiccup with our data for questions like these is we cannot determine which is first between s.order_date & mb.join_date if the date is identical.
-Did a customer place said order, became a member, then placed his first 'member' order right after, or on a future date?
+Did a customer place said order, became a member, then placed their first 'member' order right after, or on a future date?
 Did a customer become a member, placed said order?
 
 Since there is no way of knowing, we will go with this scenario:
@@ -449,15 +449,18 @@ Customer B has a total score of 820.
 
 ---
 
-### Extra 1
+### Extra 1 - Join all the things
 
 #### Approach
 
-
-
-#### Findings
-
-
+We can see the result is a simple table querying: customer_id, order_date, product_name, price, and member (Y/N).
+To build it we simply need an **INNER JOIN** menu table with sales, and a **LEFT JOIN** members with sales.
+A **CASE WHEN** for member column, expressing
+        `WHEN mb.join_date IS NULL THEN 'N'
+        WHEN mb.join_date > s.order_date THEN 'N'
+        ELSE 'Y'`
+Eventually we can just add a line if we need to for customers quitting the membership program (mb.left_date < s.order_date)
+Including **ORDER BY** for the same order as the example, customer ID, date, product, possibly price (which we're not doing here but could, I'd do descending).
 
 ---
 
@@ -467,18 +470,17 @@ Customer B has a total score of 820.
 
 
 
-#### Findings
-
-
 
 ## Summary of Insights & Recommendations
+
+### Customers
 
 After analyzing the initial sales data, several key customer profiles have emerged:
 
 **Insight 1: Customer A is a "Premium Patron"**
     - While only visiting 4 times (Finding from Q2), they have the highest spending power at $76 (Finding from Q1). This indicates a high average spend per visit.
     - On their first visit, Customer A purchased Curry (the most expensive menu item) and Sushi (Finding from Q3), suggesting a willingness to try different items or an appreciation for a varied meal no matter the item price.
-    - Although initially exploring both premium Curry and Sushi on their first visit (Finding Q3), Customer A has developed a clear preference for Ramen over time (Finding Q5).
+    - Although initially exploring both Curry and Sushi on their first visit (Finding Q3), Customer A has developed a clear preference for Ramen over time (Finding Q5).
 
 **Insight 2: Customer B is the "Loyal Regular."**
     - They are the most frequent visitor with 6 visits (Finding from Q2), but their total spending is slightly lower at $74 (Finding from Q1).
@@ -493,6 +495,21 @@ After analyzing the initial sales data, several key customer profiles have emerg
 
 **Strategic Recommendations:**
 
+**Customer A**
+    **Recommendation 1:** Implement a targeted *"We Miss You" campaign*. If they haven't visited in a while, an email with a special offer (e.g., "Try our new limited-time side dish on us") could reactivate their interest.
+    **Recommendation 2:** Encourage variety through *personalized combo offers.* Since they now prefers Ramen (Finding Q5), offer a special price on "Ramen + Sushi" to remind them of their initial exploratory purchase (Finding Q3).
+
+**Customer B**
+    **Recommendation 1:** *Upsell with high-margin items.* Since they like everything, staff could be trained to recommend adding a side of sushi or a special drink to their order.
+    **Recommendation 2:** Introduce *combo deals* that encourage a higher cart value, like a "Danny's Special Set" (e.g., any main + side + drink for a set price).
+
+**Customer C**
+    **Recommendation 1:** Create a Ramen-specific loyalty program. A simple "Buy 4 Ramens, Get the 5th Free" punch card could be highly effective and doesn't require full membership.
+    **Recommendation 2:** Use Ramen as the gateway to membership. Run an in-store promotion: "Sign up today and get a free bowl of Ramen on your next visit."
+
+---
+
+### Menu
 
 **The Menu, insights and strategies:**
 
@@ -514,4 +531,46 @@ After analyzing the initial sales data, several key customer profiles have emerg
 
 **Strategic Recommendations:**
 
+**Ramen**
+    **Strategy:** Solidify its *"Signature Dish"* status. Rebrand it on the menu as *"Danny's Signature Ramen."*
+    This creates a strong link between the restaurant's identity and its most popular item. Capitalize on its popularity by making it the centerpiece of combo deals.
 
+**Curry**
+    **Strategy:** Reinforce its premium positioning. Instead of cutting the price, justify it. Use descriptive menu language ("Rich & Aromatic Chef's Special Curry") or introduce a "Curry of the Month" with premium ingredients to create excitement and scarcity.
+
+**Sushi**
+    **Strategy:** Position Sushi as the perfect add-on. Create a "Sushi Side" offer (e.g., "Add a 3-piece roll to any main for $X"). This lowers the barrier to entry and can significantly increase the average check size, leveraging it as a high-margin upsell.
+
+---
+
+### Membership Program
+
+**The Loyalty Program**
+
+**Insight 4: The Loyalty Program's Incentives Are Misaligned with Customer Preference.**
+    The program successfully uses the Sushi 2x points multiplier to drive memberships; customers strategically purchase high-point items like Sushi and Curry around their join date (Findings 6 & 7). However, this behavior is purely transactional. Post-membership, members' purchasing habits revert to their actual favorite, Ramen, even though it provides a lower points reward (Finding 5).
+
+**Insight 5: The Welcome Bonus Encourages Short-Term Splurging, Not Long-Term Loyalty.**
+    The "2x points for the first week" promotion is a powerful short-term driver, as seen with Customer A's massive 1,370 point total (Finding 10). However, it proved ineffective at building a lasting habit, as the customer's visits ceased immediately after the promotional period, indicating they "cashed in" on the offer without developing sustained loyalty.
+
+**Strategic Recommendations**
+
+**1. Refocus the Points System on Rewarding Behavior, Not Just Items.**
+    **Strategy:** Introduce a *"Variety Bonus."* Award 1.5x or 2x points to a customer when they order a different main dish than their previous visit. This rewards loyal
+        Ramen lovers while gently encouraging them to explore the menu, increasing their overall engagement and preventing "menu fatigue."
+
+**2. Restructure the Welcome Bonus to Build a Lasting Habit.**
+    **Strategy:** Convert the "one-week sprint" into a "four-week journey." Gate the rewards to encourage return visits. For example:
+        **Visit 1 (Join Week):** Get 2x points on all items.
+        **Visit 2 (in a separate week):** Unlock a free side dish.
+        **Visit 3 (in a separate week):** Unlock 500 bonus points.
+
+This model incentivizes a consistent pattern of visits, which is far more valuable for building a loyal customer.
+
+**3. Implement High-Visibility Perks to Drive New Member Sign-Ups. Use FOMO.**
+    **Strategy:** Introduce a suite of low-cost, high-perceived-value benefits that are visible in the restaurant:
+        **Priority Seating:** Members get seated first during busy times.
+        **Reserved high-top tables:** Best seats marked *"Members Only."*
+        **Complimentary Upgrades:** Offer members free green tea refills or an upgrade on their side dish.
+        **Early Access:** Give members a one-week exclusive window to try new menu items.
+        **Exclusive events and/or items:** Advertise in-restaurant certain members-only on-goings, items or timed benefits visibly.
