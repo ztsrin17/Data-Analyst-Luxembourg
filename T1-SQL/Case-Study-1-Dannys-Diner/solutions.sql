@@ -36,7 +36,7 @@ menu mu ON s.product_id = mu.product_id
 GROUP BY
 s.customer_id
 ORDER BY
-total_amount_spent DESC --optional, clean
+total_amount_spent DESC --Order for readability
 ;
 
 -- 2. How many days has each customer visited the restaurant?
@@ -52,7 +52,7 @@ sales s
 GROUP BY
 s.customer_id
 ORDER BY
-days_visited DESC --optional, clean
+days_visited DESC --Order for readability
 ;
 
 -- 3. What was the first item from the menu purchased by each customer?
@@ -260,7 +260,7 @@ WHERE
 GROUP BY
     mu.product_name
 ORDER BY
-    times_as_first_purchase DESC -- Looks better
+    times_as_first_purchase DESC --Order for readability
 ;
 
 
@@ -295,8 +295,8 @@ GROUP BY
     mu.product_name,
 	mlp.customer_id
 ORDER BY
-    times_as_first_purchase DESC, -- Looks better
-    mlp.customer_id ASC -- optional
+    times_as_first_purchase DESC, --Order for readability
+    mlp.customer_id ASC --Order for readability
 ;
 
 -- 8. What is the total items and amount spent for each member before they became a member?
@@ -406,3 +406,58 @@ ORDER BY
 
 -- Extra 2: Rank all the things.
 
+WITH
+    base AS ( -- our EXTRA 1 query as a CTE, it seperates member orders from non-member orders
+        SELECT
+            s.customer_id,
+            s.order_date,
+            mu.product_name,
+            mu.price,
+            CASE
+                WHEN mb.join_date IS NULL THEN 'N'
+                WHEN mb.join_date > s.order_date THEN 'N'
+                ELSE 'Y'    -- we will select these in the next CTE
+            END AS member
+        FROM sales s
+        INNER JOIN menu mu ON s.product_id = mu.product_id
+        LEFT JOIN members mb ON s.customer_id = mb.customer_id
+        -- No need for ORDER BY yet
+    ),
+    member_orders AS ( -- Here we make a CTE to filter out non-member orders from the previous one
+        SELECT         -- We continue needing customer_id and the order_date
+            customer_id,
+            order_date
+        FROM base
+        WHERE member = 'Y' -- Filter out non-member orders
+        GROUP BY
+            customer_id,
+            order_date 
+    ),
+    member_orders_ranks AS ( -- Here a last CTE using the previous one to order the orders by date
+        SELECT               -- We continue needing customer_id and the order_date
+            customer_id,
+            order_date,
+            DENSE_RANK() OVER
+                (PARTITION BY customer_id        -- rank by customers seperately
+                 ORDER BY order_date ASC)        -- oldest order first
+            AS ranking
+    FROM member_orders
+    )
+SELECT
+    b.customer_id,
+    b.order_date,
+    b.product_name,
+    b.price,
+    b.member,                 -- from the first CTE (and originally EXTRA 1 answer), distinguishing member order from non-member order
+    mor.ranking               -- from the last CTE DENSE_RANKing member orders for each member seperately, NULL for non-member orders
+FROM base b
+LEFT JOIN member_orders_ranks mor ON
+    b.customer_id = mor.customer_id
+    AND b.order_date = mor.order_date
+    -- LEFT JOIN to not exclude non-member orders, based on two primary keys for distinctiveness
+    -- LEFT JOIN also allows NULL for non-member orders in ranking column
+ORDER BY    -- same ORDER as EXTRA 1 for consistency
+    b.customer_id ASC,
+    b.order_date ASC,
+    b.product_name ASC;
+;
