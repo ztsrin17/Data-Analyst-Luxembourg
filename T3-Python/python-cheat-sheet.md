@@ -24,11 +24,14 @@
 ## Common Functions
 
 ```python
-print(x, y, sep=' ', end='\n')
+print(x, y, sep=' ', end='\n')    # sep: separator, end: line ending
 len(list)  min(x, y)  max(x, y)  abs(x)
 round(x, 2)  sum(list)  any(list)  all(list)
 type(x)  help(func)
 int(x)  float(x)  str(x)  bool(x)
+range(5)         # 0-4
+range(1, 11)     # 1-10 (excludes end)
+range(0, 10, 2)  # 0,2,4,6,8 (step by 2)
 ```
 
 ## Strings
@@ -36,8 +39,10 @@ int(x)  float(x)  str(x)  bool(x)
 ```python
 f"{var} text {expr}"              # f-string (preferred)
 "text" + str(num)                 # concatenation
+" ".join(list)                    # join list elements with separator
 s.upper()  s.lower()  s.strip()
 s.replace(old, new)  s.split()
+s.rjust(width, char)              # right-justify with padding
 s[0]  s[-1]  s[1:3]              # indexing/slicing
 ```
 
@@ -82,8 +87,9 @@ for item in iterable:
 
 # Range
 for i in range(5):        # 0-4
-for i in range(1, 10):    # 1-9
-for i in range(0, 10, 2): # 0,2,4,6,8
+for i in range(1, 10):    # 1-9 (excludes end)
+for i in range(0, 10, 2): # 0,2,4,6,8 (step by 2)
+list(range(1, 11))        # [1, 2, 3, ..., 10]
 
 # While
 while condition:
@@ -126,6 +132,12 @@ num = float(input("Decimal: "))  # convert to float
 # Swap
 a, b = b, a
 
+# Print without newline
+print(x, end=' ')
+
+# Join list into string
+" ".join([str(x) for x in list])
+
 # Check type
 if isinstance(x, int):
 
@@ -146,6 +158,17 @@ sum([x > 0 for x in list])
 # Check any/all
 any(x > 0 for x in list)
 all(x > 0 for x in list)
+
+# FizzBuzz pattern
+for n in range(1, upTo + 1):
+    if n % 3 == 0 and n % 5 == 0:
+        print("FizzBuzz", end=' ')
+    elif n % 3 == 0:
+        print("Fizz", end=' ')
+    elif n % 5 == 0:
+        print("Buzz", end=' ')
+    else:
+        print(n, end=' ')
 ```
 
 ## Indexing
@@ -172,4 +195,6 @@ list[::-1]   # reverse
 ✓ **Pythonic:** `f"{x}"` `a, b = b, a` `[x for x in list]`  
 ✗ **Avoid:** `str(x) + ", " + str(y)` (use f-strings)  
 ✓ **Direct return:** `return x > 0` (not `if x > 0: return True`)  
-⚠ **Remember:** `input()` returns string, convert with `int()` or `float()`
+⚠ **Remember:** `input()` returns string, convert with `int()` or `float()`  
+⚠ **Case sensitive:** `and` `or` `not` (lowercase only, not `AND` `OR` `NOT`)  
+⚠ **Range excludes end:** `range(1, 11)` gives 1-10, not 1-11
