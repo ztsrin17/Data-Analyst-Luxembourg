@@ -114,6 +114,22 @@ def func_name(param1, param2=default):
     """Docstring"""
     return value
 
+# Multiple returns (returns tuple)
+def calc(a, b):
+    return a + b, a - b
+sum_val, diff_val = calc(5, 3)
+
+# Variable arguments
+def func(*args):               # Accepts any number of positional args (tuple)
+    for val in args:
+        print(val)
+func(1, 2, 3)
+
+def func(**kwargs):            # Accepts keyword arguments (dict)
+    for key, val in kwargs.items():
+        print(key, val)
+func(a=1, b=2)
+
 # Lambda
 lambda x: x * 2
 ```
