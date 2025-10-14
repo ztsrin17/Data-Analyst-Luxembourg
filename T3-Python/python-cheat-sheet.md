@@ -32,6 +32,11 @@ int(x)  float(x)  str(x)  bool(x)
 range(5)         # 0-4
 range(1, 11)     # 1-10 (excludes end)
 range(0, 10, 2)  # 0,2,4,6,8 (step by 2)
+
+# Higher-order functions with lambda
+list(filter(lambda x: x % 2 == 0, nums))   # Keep only even
+list(map(lambda x: x * 2, nums))           # Double each element
+sorted(data, key=lambda x: x[1])           # Sort by 2nd element
 ```
 
 ## Strings
@@ -89,7 +94,12 @@ for item in iterable:
 for i in range(5):        # 0-4
 for i in range(1, 10):    # 1-9 (excludes end)
 for i in range(0, 10, 2): # 0,2,4,6,8 (step by 2)
+for i in range(1, 10, 2): # 1,3,5,7,9 (odd numbers)
 list(range(1, 11))        # [1, 2, 3, ..., 10]
+
+# Loop through string indices
+for i in range(len(string)):
+    print(string[i])
 
 # While
 while condition:
@@ -130,8 +140,25 @@ def func(**kwargs):            # Accepts keyword arguments (dict)
         print(key, val)
 func(a=1, b=2)
 
-# Lambda
-lambda x: x * 2
+# Inner functions (closures)
+def outer(a, b):
+    def inner():
+        return a + b           # Accesses outer variables
+    return inner()
+
+# Recursive function
+def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+# Function assignment
+show = display                 # Assign function to new name
+show()                         # Call through new name
+
+# Lambda (anonymous function)
+square = lambda x: x ** 2
+sorted(data, key=lambda x: x[1])  # Sort by second element
 ```
 
 ## Input/Output
@@ -148,6 +175,13 @@ num = float(input("Decimal: "))  # convert to float
 # Swap
 a, b = b, a
 
+# Unpack and call function
+values = [1, 2, 3]
+func(*values)              # Unpacks as func(1, 2, 3)
+
+# Multiple returns
+sum_val, diff_val = calc(a, b)
+
 # Print without newline
 print(x, end=' ')
 
@@ -160,6 +194,14 @@ if isinstance(x, int):
 # Loop with index
 for i in range(len(list)):
     list[i]
+
+# Every other element (even indices)
+for i in range(0, len(string), 2):
+    print(string[i])
+
+# Every other element (odd indices)
+for i in range(1, len(string), 2):
+    print(string[i])
 
 # Adjacent elements
 for i in range(len(list) - 1):
@@ -196,6 +238,8 @@ list[1:4]    # slice [1,2,3] (end excluded)
 list[:3]     # first 3
 list[3:]     # from index 3 to end
 list[::-1]   # reverse
+list[::2]    # every 2nd element (0,2,4,...)
+list[1::2]   # every 2nd starting at 1 (1,3,5,...)
 ```
 
 ## Key Differences from SQL/Excel
@@ -208,9 +252,13 @@ list[::-1]   # reverse
 
 ## Quick Syntax Rules
 
-✓ **Pythonic:** `f"{x}"` `a, b = b, a` `[x for x in list]`  
-✗ **Avoid:** `str(x) + ", " + str(y)` (use f-strings)  
+✓ **Pythonic:** `f"{x}"` `a, b = b, a` `[x for x in list]` `lambda x: x * 2`  
+✗ **Avoid:** `str(x) + ", " + str(y)` (use f-strings) | Complex lambdas (use `def`)  
 ✓ **Direct return:** `return x > 0` (not `if x > 0: return True`)  
+✓ **Error handling:** `raise ValueError("msg")` (not `return print()`)  
 ⚠ **Remember:** `input()` returns string, convert with `int()` or `float()`  
 ⚠ **Case sensitive:** `and` `or` `not` (lowercase only, not `AND` `OR` `NOT`)  
-⚠ **Range excludes end:** `range(1, 11)` gives 1-10, not 1-11
+⚠ **Range excludes end:** `range(1, 11)` gives 1-10, not 1-11  
+⚠ **Indexing syntax:** `string[i]` not `string(i)` (square brackets, not parentheses)  
+⚠ **Scope:** Local variables don't affect global unless using `global` keyword  
+⚠ **Recursion limit:** Python has max recursion depth; prefer iteration for large values
