@@ -37,6 +37,12 @@ range(0, 10, 2)  # 0,2,4,6,8 (step by 2)
 list(filter(lambda x: x % 2 == 0, nums))   # Keep only even
 list(map(lambda x: x * 2, nums))           # Double each element
 sorted(data, key=lambda x: x[1])           # Sort by 2nd element
+
+# functools.reduce (cumulative operations)
+from functools import reduce
+reduce(lambda x, y: x + y, nums)           # Sum all
+reduce(lambda x, y: x * y, nums)           # Product of all
+reduce(lambda x, y: x if x > y else y, nums)  # Find max
 ```
 
 ## Strings
@@ -59,7 +65,9 @@ list = [1, 2, 3]
 list[0]  list[-1]  list[1:3]
 
 # Methods (modify in-place, return None)
-list.append(x)  list.pop()  list.reverse()  list.sort()
+list.append(x)  list.pop()  list.reverse()  
+list.sort()     # Modifies original
+sorted(list)    # Returns new sorted list (preserves original)
 list.count(x)  list.index(x)
 
 # Operations (return new list)
@@ -152,6 +160,12 @@ def factorial(n):
         return 1
     return n * factorial(n - 1)
 
+# Recursive with list slicing
+def recursive_sum(lst):
+    if not lst:                # Base case: empty list
+        return 0
+    return lst[0] + recursive_sum(lst[1:])  # First + sum of rest
+
 # Function assignment
 show = display                 # Assign function to new name
 show()                         # Call through new name
@@ -159,6 +173,9 @@ show()                         # Call through new name
 # Lambda (anonymous function)
 square = lambda x: x ** 2
 sorted(data, key=lambda x: x[1])  # Sort by second element
+
+# Nested ternary (use sparingly)
+max_val = a if a > b and a > c else b if b > c else c
 ```
 
 ## Input/Output
@@ -191,6 +208,15 @@ print(x, end=' ')
 # Check type
 if isinstance(x, int):
 
+# Accumulator pattern
+total = 0                  # Sum: start at 0
+for i in lst:
+    total += i
+
+product = 1                # Product: start at 1
+for i in lst:
+    product *= i
+
 # Loop with index
 for i in range(len(list)):
     list[i]
@@ -209,6 +235,10 @@ for i in range(len(list) - 1):
 
 # Unused variable
 for _ in range(n):
+
+# Conditional operations
+sum(i for i in lst if i > 0)           # Sum positives only
+[i for i in lst if i != 0]             # Filter out zeros
 
 # Count True values
 sum([x > 0 for x in list])
@@ -253,12 +283,15 @@ list[1::2]   # every 2nd starting at 1 (1,3,5,...)
 ## Quick Syntax Rules
 
 ✓ **Pythonic:** `f"{x}"` `a, b = b, a` `[x for x in list]` `lambda x: x * 2`  
-✗ **Avoid:** `str(x) + ", " + str(y)` (use f-strings) | Complex lambdas (use `def`)  
+✗ **Avoid:** `str(x) + ", " + str(y)` (use f-strings) | Complex nested ternary  
 ✓ **Direct return:** `return x > 0` (not `if x > 0: return True`)  
 ✓ **Error handling:** `raise ValueError("msg")` (not `return print()`)  
+✓ **Preserve original:** `sorted(list)` returns new | `.sort()` modifies in-place  
+⚠ **Accumulator init:** Sum starts at 0 | Product starts at 1  
 ⚠ **Remember:** `input()` returns string, convert with `int()` or `float()`  
 ⚠ **Case sensitive:** `and` `or` `not` (lowercase only, not `AND` `OR` `NOT`)  
 ⚠ **Range excludes end:** `range(1, 11)` gives 1-10, not 1-11  
 ⚠ **Indexing syntax:** `string[i]` not `string(i)` (square brackets, not parentheses)  
 ⚠ **Scope:** Local variables don't affect global unless using `global` keyword  
-⚠ **Recursion limit:** Python has max recursion depth; prefer iteration for large values
+⚠ **Recursion limit:** Python has max recursion depth; prefer iteration for large values  
+⚠ **Variable names:** Use `lst` not `list` to avoid shadowing built-in type
